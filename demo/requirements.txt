@@ -2,6 +2,7 @@ torch
 torchvision
 transformers
 huggingface_hub
+spaces
 einops
 omegaconf
 easydict

@@ -31,6 +31,15 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import gradio as gr
 
+# ZeroGPU: import before torch CUDA touches anything. When the `spaces` package
+# isn't installed (local dev), fall back to a no-op decorator.
+try:
+    import spaces
+    _GPU_DECORATOR = spaces.GPU(duration=120)
+except ImportError:
+    def _GPU_DECORATOR(fn):
+        return fn
+
 from app_demo import WildRayZerDemo
 
 
@@ -143,6 +152,7 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
     print(f"Loading model from:\n  ckpt={checkpoint}\n  cfg={config}")
     demo_model = WildRayZerDemo(checkpoint, config)
 
+    @_GPU_DECORATOR
     def run_example(scene: str, thr: float, render_video: bool):
         ctx, tgt = _resolve_paths(view_idx, images_dir, scene) if scene else ([], [])
         if not ctx or not tgt:
@@ -151,6 +161,7 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
         outs = _call_render(demo_model, ctx, tgt, thr, render_video, label=f"scene: {scene}")
         return (ctx, tgt, *outs)
 
+    @_GPU_DECORATOR
     def run_upload(input_files, target_files, thr, render_video):
         if not input_files or not target_files:
             return ([], [], None, None, None, None, None, None, None,
@@ -178,11 +189,15 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
                     f"Click a scene below (pre-defined **{NUM_INPUT} context + "
                     f"{NUM_TARGET} target** views per scene)."
                 )
+                # height=None lets the gallery grow to fit every thumbnail; with
+                # columns=6 and ~25 scenes this renders ~5 rows inline (no hidden
+                # scrollbar inside the widget — users were missing rows 2-5).
                 example_gallery = gr.Gallery(
                     value=example_thumbs,
                     label=f"D-RE10K test scenes ({len(example_thumbs)})",
                     columns=6,
-                    height=200,
+                    rows=(len(example_thumbs) + 5) // 6,  # ceil(N / columns)
+                    height=None,
                     object_fit="cover",
                     allow_preview=False,
                     show_label=True,
