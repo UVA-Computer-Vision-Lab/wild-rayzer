@@ -1,0 +1,109 @@
+model:
+  class_name: model.rayzer_official.Images2Latent4D
+
+  image_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 3  # RGB only for official RAYZER
+
+  target_pose_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 6  # Plucker coordinates
+
+  target_image:
+    height: 256
+    width: 256
+    patch_size: 16
+    in_channels: 3
+
+  scene_latent:
+    length: 768  # Scene code length
+
+  pose_latent:
+    length: 1
+    representation: "6d"  # or "quat"
+    canonical: "first"
+
+  camera_estimator:
+    n_layers: 8
+    use_qk_norm: true
+    canonical_view: first
+
+  transformer:
+    d: 768
+    d_head: 64
+    encoder_n_layer: 12
+    encoder_geom_n_layer: 8
+    decoder_n_layer: 12
+    special_init: true
+    depth_init: true
+    use_qk_norm: true
+    fix_decoder: false
+
+training:
+  # Optional resume checkpoint. Leave empty for from-scratch pretraining.
+  init_checkpoint: ""
+  save_evaluations: True
+  log_render_to_wandb: true
+  log_render_every: 100
+  max_wandb_images: 4
+  amp_dtype: bf16
+  api_key_path: ./configs/api_keys.yaml
+  batch_size_per_gpu: 8
+  beta1: 0.9
+  beta2: 0.95
+  allowed_gradnorm_factor: 5
+  center_crop: true
+  scene_scale_factor: 1.35
+  checkpoint_dir: ./experiments/wildrayzer_stage1_pretrain/checkpoints
+  checkpoint_every: 2000
+  dataset_name: data.dataset_scene_official.Dataset
+  dataset_path: ./data/re10k_processed_v2/train/full_list.txt
+  grad_accum_steps: 2
+  grad_checkpoint_every: 1
+  grad_clip_norm: 1.0
+  l2_loss_weight: 1.0
+  lpips_loss_weight: 0.0
+  perceptual_loss_weight: 0.2
+
+  lr: 0.0001
+  train_steps: 100000
+  num_input_views: 2
+  num_target_views: 6
+  num_threads: 8
+  num_views: 8
+  num_workers: 4
+
+  prefetch_factor: 32
+  print_every: 20
+  render_interpolate: false
+  random_split: false
+
+  square_crop: true
+  target_has_input: true
+  use_amp: true
+  use_rel_pose: false
+  use_tf32: true
+  view_selector:
+    max_frame_dist: 192
+    min_frame_dist: 25
+  vis_every: 100
+  wandb_exp_name: Rayzer_official_re10k_2_6
+  wandb_log_every: 50
+  
+  wandb_project: RAYZER
+  warmup: 6000
+  weight_decay: 0.05
+
+# inference / evaluation
+inference:
+  if_inference: False
+  compute_metrics: False
+  view_idx_file_path: ./data/evaluation_index_re10k.json
+  render_video: False
+  render_video_config:
+    traj_type: interpolate
+    num_frames: 60
+    loop_video: False  # Disable looping to avoid tensor concatenation issues
+    order_poses: False

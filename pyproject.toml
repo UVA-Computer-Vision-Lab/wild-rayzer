@@ -1,0 +1,30 @@
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | env
+  | experiments
+)/
+'''
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503", "E701", "F841", "E731"]
+
+[tool.ruff]
+line-length = 100
+extend-ignore = ["E203", "W503", "E701", "F841", "E731"]
+

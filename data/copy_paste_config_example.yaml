@@ -1,0 +1,47 @@
+# Example configuration for copy-paste augmentation
+# Add this section to your training config YAML
+
+training:
+  # ... your existing training config ...
+  
+  # Copy-paste augmentation configuration
+  copy_paste:
+    enabled: true  # Set to false to disable
+    
+    # COCO dataset paths - UPDATE THESE PATHS!
+    coco_root: "/anvil/projects/x-nairr250073/xuweic/WildRayzer/data/train2014"
+    coco_ann_file: "/anvil/projects/x-nairr250073/xuweic/WildRayzer/data/annotations/instances_train2014.json"
+    
+    # Augmentation parameters
+    paste_probability: 0.5  # 50% of sequences will get augmented
+    num_animals_per_scene: [1, 2]  # Randomly pick 1 or 2 objects per sequence
+    
+    # Animal categories to use (COCO category IDs)
+    # 16: bird, 17: cat, 18: dog, 19: horse, 20: sheep
+    # 21: cow, 22: elephant, 23: bear, 24: zebra, 25: giraffe
+    animal_categories: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                        22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
+                        43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+                        62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84,
+                        85, 86, 87, 88, 89, 90]  # All 80 COCO categories
+    # Or use subset: animal_categories: [17, 18, 19]  # cats, dogs, horses only
+    
+    # Placement parameters (each view gets different random placement)
+    scale_range: [0.2, 0.3]  # Each object occupies 20%-30% of the image (max dimension)
+    position_margin: 0.15  # Keep objects ~15% away from image edges
+    
+    # Blending parameters
+    blend: true  # Use Gaussian blending for smooth edges
+    sigma: 3  # Blur sigma for edge blending
+
+    # Object sharing strategy
+    per_view_objects: false  # Default fallback when probability not provided
+    per_view_objects_prob: 0.5  # 50% chance to use per-view objects vs per-sequence objects
+
+    # Optional: generate binary overlay masks for pasted regions
+    generate_overlay_masks: true
+
+# Note: Augmentation is applied to BOTH input and target views
+# When per_view_objects_prob > 0, some views will receive unique objects
+# Binary masks (if enabled) mark pasted regions with 1 (white) and background with 0 (black)
+

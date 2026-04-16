@@ -1,0 +1,226 @@
+# WildRayZer — inference config (2 input / 6 target views)
+
+model:
+  class_name: model.rayzer_official_v3.Images2Latent4D
+
+  image_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 3  # RGB only for official RAYZER
+
+  target_pose_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 6  # Plucker coordinates
+
+  target_image:
+    height: 256
+    width: 256
+    patch_size: 16
+    in_channels: 3
+
+  scene_latent:
+    length: 768  # Scene code length
+
+  pose_latent:
+    length: 1
+    representation: "6d"  # or "quat"
+    canonical: "first"
+
+  input_with_pe: true
+
+  transformer:
+    d: 768
+    d_head: 64
+    encoder_n_layer: 12      # First encoder (pose estimation)
+    encoder_geom_n_layer: 8  # Second encoder (scene encoding)
+    decoder_n_layer: 12      # Decoder (rendering)
+    special_init: true
+    depth_init: true
+    use_qk_norm: true
+    fix_decoder: false
+
+  # ===== STAGE 3: Train Rendering with Learned Motion Masks =====
+  use_motion_mask: true
+  motion_mask_only_training: false  # Train rendering, freeze motion mask
+  use_token_dropping: false
+  use_mae_masking: true
+  
+  # RE10K dropout for robust 3D inpainting (static scenes)
+  re10k_random_dropout: false
+  re10k_dropout_ratio: 0.1  # 20% token dropout
+  
+  # DRE10K additional dropout for robustness (dynamic scenes)
+  # Adds small random boxes on top of learned motion masks
+  dre10k_random_dropout: false
+  dre10k_dropout_ratio: 0.05  # 5% additional token dropout
+  
+  use_find_unused_parameters: true
+  
+  # DINOv3 pseudo-label generator
+  use_dinov3_pseudolabel: false
+  dinov3_pseudolabel:
+    model_name: "facebook/dinov3-vit7b16-pretrain-lvd1689m"
+    use_ssim: true
+    target_size: 256
+    
+    # Binary co-segmentation (better than soft masks)
+    # use_coseg_binary: true
+    # w_dino: 0.6
+    # w_ssim: 0.4
+    # coseg_k: 64
+    # coseg_consistency_min_frames: 4
+    # coseg_frame_saliency_quantile: 0.75
+    # coseg_cluster_top_percent: 0.05
+    # coseg_morph_kernel: 3
+    # coseg_morph_iters: 1
+    # coseg_min_component_area_ratio: 0.0025
+    # coseg_grabcut_kernel: 7
+    # motion_mask_threshold: 0.1  # Binarization threshold for masks
+    
+    # Opportunistic caching for DINOv3 pseudo-labels (speeds up training with frozen rendering)
+    enable_mask_cache: false
+    mask_cache_dir: ./experiments/wildrayzer_inference/motion_mask_cache
+  
+
+training:
+  # ==============================================================================
+  # Stage 2: Motion Mask Training
+  # ==============================================================================
+  # In this stage, we freeze the pre-trained rendering model and ONLY train the
+  # motion mask predictor using DINOv3 pseudo-labels as supervision.
+  copy_paste:
+    enabled: true
+    coco_root: "./data/coco/train2014"
+    coco_ann_file: "./data/coco/annotations/instances_train2014.json"
+    paste_probability: 0.8  # Always apply for testing
+    num_animals_per_scene: [1, 2]  # 1-2 objects per paste
+    # All 80 COCO categories (person, vehicles, animals, furniture, food, etc.)
+    animal_categories: [1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90]
+    scale_range: [0.25, 0.35]  # each object occupies ~20%-30% of image size
+    position_margin: 0.15
+    blend: false
+    sigma: 1
+    per_view_objects: false  # fallback behavior if probability not set
+    per_view_objects_prob: 0.5  # 50% chance to use per-view objects vs per-sequence
+    generate_overlay_masks: true  # produce binary masks of pasted regions
+
+  motion_mask_only_training: false # Only train motion mask predictor
+
+  save_evaluations: false
+  
+  # Deterministic view selection for cache-friendly training
+  # Same scene uses same views within each epoch group → 100% cache hit rate
+  deterministic_views: false
+  deterministic_views_refresh_every: 1500  # Refresh views every 1000 steps (~1 epoch)
+  log_render_to_wandb: true
+  log_render_every: 100
+  max_wandb_images: 4
+  amp_dtype: bf16
+  api_key_path: ./configs/api_keys.yaml
+  batch_size_per_gpu: 1
+  beta1: 0.9
+  beta2: 0.95
+  allowed_gradnorm_factor: 5
+  center_crop: true
+  checkpoint_dir: ./experiments/wildrayzer_inference/checkpoints
+  checkpoint_every: 1000
+
+  # Not used at inference time; set to the final trained checkpoint if resuming.
+  init_checkpoint: ""
+
+  dataset_name: data.dataset_scene_official.Dataset
+  dataset_path: ./data/dynamic_re10k/test/wildrayzer_final_context_2.txt
+  scene_scale_factor: 1.0
+  grad_accum_steps: 1
+  grad_checkpoint_every: 1
+  grad_clip_norm: 1.0
+  
+  # Loss weights
+  l2_loss_weight: 1.0
+  lpips_loss_weight: 0.0
+  perceptual_loss_weight: 0.2
+
+  # Motion mask distillation loss (ONLY active loss)
+  mask_distill_loss_weight: 1.0
+
+  # CRITICAL: Filter samples for motion mask BCE loss if rendering PSNR is too low.
+  # This prevents the BCE loss from collapsing when faced with challenging dynamic
+  # scenes that produce noisy pseudo-labels. This was the key difference that
+  # made the other experiment work.
+  psnr_filter_threshold: 17.0
+
+  # ===== STAGE 3: Masked Reconstruction Loss =====
+  # Mask out dynamic regions (predicted motion) from reconstruction loss
+  # This prevents the model from trying to reconstruct moving objects
+  use_masked_reconstruction_loss: true
+  motion_mask_threshold: 0.08  # Threshold for motion detection (>0.1 = dynamic, ≤0.1 = static)
+
+  lr: 0.0002
+  train_steps: 40000
+  
+  # View selection
+  num_views: 8
+  num_input_views: 2
+  num_target_views: 6
+  target_has_input: false  # Match RayZer
+  random_split: true       # Match RayZer
+  
+  view_selector:
+    type: two_frame
+    min_frame_dist: 25
+    max_frame_dist: 192
+    use_curriculum: false
+  
+  view_selector_dynamic:
+    type: two_frame
+    min_frame_dist: 8
+    max_frame_dist: 12
+    use_curriculum: false
+  
+  num_threads: 8
+  num_workers: 4
+  prefetch_factor: 32
+  print_every: 20
+  render_interpolate: true
+
+  square_crop: true
+  use_amp: true
+  use_rel_pose: false
+  use_tf32: true
+  vis_every: 500
+  
+  wandb_project: rayzer_official
+  wandb_exp_name: rayzer_official_re10k_motion_mask_stage3
+  wandb_log_every: 50
+  
+  warmup: 1000
+  weight_decay: 0.01
+
+# Inference / Evaluation
+inference:
+  if_inference: true
+  use_gt_motion_masks: false
+  use_gt_images_for_inference: false
+  render_input_predictions: true
+  motion_mask_root:
+    default: ./data/dynamic_re10k/test/binary_masks
+  model_path: ./checkpoints/wildrayzer_2view.pt
+  view_idx_file_path: ./data/dynamic_re10k/test/wildrayzer_final_context_2_view_idx.json
+  render_video: false
+  render_video_config:
+    traj_type: dataset
+    num_frames: 60
+    loop_video: false
+    order_poses: true
+  
+  # Plücker embedding visualization
+  save_plucker_vis: false  # Enable Plücker diagnostics (direction, moment, Klein residual)
+  plucker_vis_stride: 16  # Downsampling stride for quiver plot (lower = denser arrows)
+  plucker_vis_include_quiver: false  # 3D sphere+tangent quiver plot (expensive, disable for batch eval)
+
+# Output directory for evaluation results
+inference_out_root: ./experiments/wildrayzer_inference/results
+
+
+

@@ -1,0 +1,204 @@
+metric_checkpoint
+model_checkpoints
+checkpoints/
+preprocessed_data
+data_scripts/
+dl3dv_benchmark/
+dl3dv_benchmark.zip
+experiments/
+log/
+configs/api_keys.yaml
+configs/rayzer_dl3dv_s3.yaml
+configs/LVSM_scene_encoder_decoder_s3.yaml
+wandb/
+data/dataset_scene_s3.py
+data/dl3dv10k_benchmark_s3.txt
+wandb/
+train.sh
+eval.sh
+data/wildrayzer.zip
+
+
+.DS_Store
+.vscode
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+minLRM/paper_demo
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+.pdm.toml
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.mp4
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+data/dynamic_re10k
+data/re10k_preprocessed
+env
+.flake8
+env-oneformer
+OneFormer
+pretrained_weights
+env-oneformer-0
+scripts/annotate_object/*
+YOLO_Segmentation
+
+useless
+one-the-go
+robustnerf
+.gradio
+on-the-go
+data/on_the_go_eval/
+*json
+scripts/on-the-go-data-curation
+scripts/dinov3_visualization/outputs
+data/wildrayzer
+test_rayzer_integration.py
+scripts/verify_inference_setup.py
+INFERENCE_MOTION_EVAL.txt
+RAYZAR_INTEGRATION.md
+scripts/dinov3_visualization/sample_00000807
+scripts/dinov3_visualization/sample_00002417
+scripts/dinov3_visualization/Rayzer_official_re10k_3_6_two_frame_full
+data/wildrayzer_v2
+pseudolabel_cache
+data/wildrayzer-final.zip
+data/wildrayzer-final
+
+copy-paste-aug
+data/coco
+data/DAVIS
+GRADIENT_FLOW_FIX.md
+VISUALIZATION_UPDATE.md
+debug_dinov3
+data/DynamicVerse
+data/mask_2.zip
+data/motion_masks_co-seg_dre10k
+data/motion_masks_co-seg_dre10k_stage4
+data/motion_masks_co-seg_wildrayzer*
+data/motion_masks_megasam*
+data/motion_masks_videocutler*
+data/paper_result_mask
+scripts/evaluate_motion_mask
+paper
+experiments
+checkpoints
+demo/data/dynamic_re10k/test/images/
+demo/checkpoints/
+demo/__pycache__/
+demo/**/__pycache__/

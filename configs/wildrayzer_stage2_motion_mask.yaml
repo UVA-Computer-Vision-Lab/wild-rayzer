@@ -1,0 +1,191 @@
+# WildRayZer — Stage 2: motion mask training (frozen RayZer renderer)
+
+model:
+  class_name: model.rayzer_official_v2.Images2Latent4D
+
+  image_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 3  # RGB only for official RAYZER
+
+  target_pose_tokenizer:
+    image_size: 256
+    patch_size: 16
+    in_channels: 6  # Plucker coordinates
+
+  target_image:
+    height: 256
+    width: 256
+    patch_size: 16
+    in_channels: 3
+
+  scene_latent:
+    length: 768  # Scene code length
+
+  pose_latent:
+    length: 1
+    representation: "6d"  # or "quat"
+    canonical: "first"
+
+  input_with_pe: true
+
+  transformer:
+    d: 768
+    d_head: 64
+    encoder_n_layer: 12      # First encoder (pose estimation)
+    encoder_geom_n_layer: 8  # Second encoder (scene encoding)
+    decoder_n_layer: 12      # Decoder (rendering)
+    special_init: true
+    depth_init: true
+    use_qk_norm: true
+    fix_decoder: false
+
+  # ===== STAGE 2: Use Learned Motion Masks, No BCE Distillation =====
+  use_motion_mask: true
+  motion_mask_only_training: true  # Only train motion mask predictor
+  
+  # DINOv3 pseudo-label generator
+  use_dinov3_pseudolabel: true
+  dinov3_pseudolabel:
+    model_name: "facebook/dinov3-vit7b16-pretrain-lvd1689m"
+    use_ssim: true
+    target_size: 256
+    
+    # Binary co-segmentation (better than soft masks)
+    use_coseg_binary: true
+    w_dino: 0.6
+    w_ssim: 0.4
+    coseg_k: 64
+    coseg_consistency_min_frames: 4
+    coseg_frame_saliency_quantile: 0.75
+    coseg_cluster_top_percent: 0.05
+    coseg_morph_kernel: 3
+    coseg_morph_iters: 1
+    coseg_min_component_area_ratio: 0.0025
+    coseg_grabcut_kernel: 7
+    # motion_mask_threshold: 0.1  # Binarization threshold for masks
+    
+    # Opportunistic caching for DINOv3 pseudo-labels (speeds up training with frozen rendering)
+    enable_mask_cache: true
+    mask_cache_dir: ./experiments/wildrayzer_stage2_motion_mask/motion_mask_cache
+  
+  
+
+training:
+  # ==============================================================================
+  # Stage 2: Motion Mask Training
+  # ==============================================================================
+  # In this stage, we freeze the pre-trained rendering model and ONLY train the
+  # motion mask predictor using DINOv3 pseudo-labels as supervision.
+  motion_mask_only_training: true # Only train motion mask predictor
+
+  save_evaluations: true
+  
+  # Deterministic view selection for cache-friendly training
+  # Same scene uses same views within each epoch group → 100% cache hit rate
+  deterministic_views: true
+  deterministic_views_refresh_every: 1500  # Refresh views every 1000 steps (~1 epoch)
+  log_render_to_wandb: true
+  log_render_every: 100
+  max_wandb_images: 4
+  amp_dtype: bf16
+  api_key_path: ./configs/api_keys.yaml
+  batch_size_per_gpu: 16
+  beta1: 0.9
+  beta2: 0.95
+  allowed_gradnorm_factor: 5
+  center_crop: true
+  scene_scale_factor: 1.35
+  checkpoint_dir: ./experiments/wildrayzer_stage2_motion_mask/checkpoints
+  checkpoint_every: 1000
+
+  # Load pre-trained RayZer checkpoint from Stage 1
+  init_checkpoint: ./experiments/wildrayzer_stage1_pretrain/checkpoints/ckpt_0000000000100000.pt
+
+  # Dataset: Mixed RE10K (50% dynamic + 50% static)
+  dataset_name: data.dataset_mixed_re10k_official.Dataset
+
+  # Dynamic RE10K path (motion scenes)
+  dynamic_re10k_path: ./data/dynamic_re10k/train/full_list.txt
+
+  # Static RE10K path (static scenes)
+  static_re10k_path: ./data/re10k_processed_v2/train/full_list.txt
+  
+  # Mix ratio: 0.5 = 50% dynamic, 50% static
+  dataset_mix_ratio: 0.5
+  
+  # Scene scale factors
+  dynamic_scene_scale_factor: 1.0   # Dynamic RE10K (short clips)
+  static_scene_scale_factor: 1.35   # Static RE10K (long sequences)
+
+  grad_accum_steps: 1
+  grad_checkpoint_every: 1
+  grad_clip_norm: 1.0
+  
+  # Loss weights
+  l2_loss_weight: 0.0
+  lpips_loss_weight: 0.0
+  perceptual_loss_weight: 0.0
+
+  # Motion mask distillation loss (ONLY active loss)
+  mask_distill_loss_weight: 1.0
+
+  # CRITICAL: Filter samples for motion mask BCE loss if rendering PSNR is too low.
+  # This prevents the BCE loss from collapsing when faced with challenging dynamic
+  # scenes that produce noisy pseudo-labels. This was the key difference that
+  # made the other experiment work.
+  psnr_filter_threshold: 17.0
+
+  lr: 0.0001
+  train_steps: 10000
+  
+  # View selection
+  num_views: 8
+  num_input_views: 2
+  num_target_views: 6
+  target_has_input: false  # Match RayZer
+  random_split: true       # Match RayZer
+  
+  view_selector:
+    type: two_frame
+    min_frame_dist: 25
+    max_frame_dist: 192
+    use_curriculum: false
+  
+  view_selector_dynamic:
+    type: two_frame
+    min_frame_dist: 8
+    max_frame_dist: 12
+    use_curriculum: false
+  
+  num_threads: 8
+  num_workers: 4
+  prefetch_factor: 32
+  print_every: 20
+  render_interpolate: true
+
+  square_crop: true
+  use_amp: true
+  use_rel_pose: false
+  use_tf32: true
+  vis_every: 50
+  
+  wandb_project: rayzer_official
+  wandb_exp_name: rayzer_official_re10k
+  wandb_log_every: 50
+  
+  warmup: 1000
+  weight_decay: 0.01
+
+# Inference / Evaluation
+inference:
+  if_inference: false
+  compute_metrics: false
+  view_idx_file_path: ./data/evaluation_index_re10k.json
+  render_video: false
+  render_video_config:
+    traj_type: interpolate
+    num_frames: 60
+    loop_video: false
+    order_poses: false
+

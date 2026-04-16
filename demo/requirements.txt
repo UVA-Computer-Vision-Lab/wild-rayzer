@@ -1,0 +1,15 @@
+torch
+torchvision
+transformers
+huggingface_hub
+einops
+omegaconf
+easydict
+gradio
+numpy
+Pillow
+opencv-python-headless
+av
+lpips
+tqdm
+xformers
