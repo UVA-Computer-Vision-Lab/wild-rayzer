@@ -18,7 +18,7 @@
     <a href="https://arxiv.org/abs/2601.10716"><strong>Paper</strong></a> |
     <a href="https://wild-rayzer.cs.virginia.edu/"><strong>Project Page</strong></a> |
     <a href="https://huggingface.co/datasets/uva-cv-lab/Dynamic-RE10K"><strong>Dynamic-RE10K</strong></a> |
-    <a href=""><strong>🤗 Live Demo (coming soon)</strong></a>
+    <a href="https://huggingface.co/spaces/uva-cv-lab/wildrayzer"><strong>🤗 Live Demo </strong></a>
 </div>
 
 --------------------------------------------------------------------------------
