@@ -109,7 +109,7 @@ We release the **2-input-view** checkpoint used by the demo. Place it at `./chec
 
 | Views | Model | Download |
 |-------|-------|----------|
-| 2-input / 6-target | WildRayZer | *Upload link coming soon* |
+| 2-input / 6-target | WildRayZer | [Huggingface](https://huggingface.co/uva-cv-lab/wildrayzer-checkpoints) |
 
 To train your own checkpoint (e.g. 3- or 4-input-view settings), follow the three-stage pipeline in [§3 Training](#3-training). A full run from Stage 1 → Stage 3 on 8× H100 reproduces the paper's D-RE10K numbers.
 
