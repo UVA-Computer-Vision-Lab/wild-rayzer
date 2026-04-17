@@ -85,71 +85,6 @@ Hardware requirements: CUDA GPU with **≥ 40 GB VRAM** (the motion-mask
 predictor fuses DINOv3 ViT-7B patch features with image/Plücker tokens at
 inference time — this 7B backbone is a hard dependency, not optional).
 
-## Training
-
-Training proceeds in three stages over ~8× H100-days on 256×256 clips:
-
-1. **Stage 1 — RayZer pretraining.** Train the static backbone on
-   RealEstate10K with 2 input / 6 target views.
-2. **Stage 2 — Motion mask training.** Freeze the renderer; train the motion
-   mask predictor to match DINOv3+SSIM pseudo-labels derived from the frozen
-   renderer's residuals. A PSNR filter (threshold 17 dB) drops noisy samples.
-3. **Stage 3 — Joint masked reconstruction + copy-paste augmentation.** Unfreeze
-   the renderer; train jointly with MAE-style token masking and COCO
-   copy-paste augmentation that injects synthetic transients into static clips.
-
-See `configs/wildrayzer_stage{1,2,3}_*.yaml` in the companion repo for exact
-hyperparameters.
-
-## Evaluation
-
-Numbers are from Table 2/3/4 of the paper (CVPR 2026).
-
-**D-RE10K (static-region NVS, K=2 input views):**
-
-|            | PSNR ↑ | SSIM ↑ | LPIPS ↓ |
-|---         |---     |---     |---      |
-| NeRF On-the-go | 15.90 | 0.518 | 0.582 |
-| 3DGS           | 13.49 | 0.442 | 0.605 |
-| WildGaussians  | 16.12 | 0.512 | 0.624 |
-| RayZer + SAV   | 19.01 | 0.628 | 0.397 |
-| **WildRayZer** | **21.78** | **0.734** | **0.308** |
-
-**D-RE10K-iPhone (full-image NVS, K=2 input views):**
-
-|                | PSNR ↑ | SSIM ↑ | LPIPS ↓ |
-|---             |---     |---     |---      |
-| WildGaussians  | 18.43 | 0.514 | 0.643 |
-| RayZer + SAV   | 18.52 | 0.516 | 0.502 |
-| **WildRayZer** | **20.89** | **0.611** | **0.364** |
-
-**Motion-mask quality (D-RE10K, self-supervised row):**
-
-|            | mIoU (K=2) | Recall (K=2) |
-|---         |---         |---           |
-| Co-segmentation | 53.9  | 85.1 |
-| **WildRayZer**  | **53.9** | **85.1** |
-
-(WildRayZer also reports 52.1 / 54.2 mIoU for K=3 / K=8 — see paper.)
-
-## Intended use & limitations
-
-**Intended use.**
-- Research on self-supervised novel-view synthesis in dynamic, in-the-wild video.
-- Transient-aware sparse-view rendering on casually captured indoor clips.
-- Motion-mask prediction for dynamic regions in static-camera or handheld footage.
-
-**Out of scope.**
-- Per-frame segmentation: the predicted masks flag regions that break multi-view
-  consistency, not exhaustive instance boundaries — motion-mask may miss static
-  parts of moving objects (e.g. a stationary limb of a moving person).
-- Heavily dynamic scenes where transient objects cover a large fraction of all
-  input views: reconstruction degrades because no view sees the occluded
-  background.
-- Non-indoor domains: the checkpoint is trained on RealEstate10K-derived
-  indoor data; outdoor generalization is partial (see DAVIS examples in the
-  paper's supplementary).
-
 **Known caveats.**
 - Sensitive to the number of input views due to image-index positional
   embeddings. This checkpoint is intended for K=2 input + T=6 target views.
@@ -177,7 +112,7 @@ attribution required. For commercial licensing, contact the authors.
 
 ## Acknowledgements
 
-This work was supported by the Adobe Research Gift, the University of Virginia
+This work was supported by the MathWorks Research Gift, Adobe Research Gift, the University of Virginia
 Research Computing and Data Analytics Center, the AMD AI & HPC Cluster Program,
 the ACCESS program, and the NAIRR Pilot. Computation was run on the Anvil
 supercomputer (NSF OAC-2005632) at Purdue and on Delta / DeltaAI (NSF
