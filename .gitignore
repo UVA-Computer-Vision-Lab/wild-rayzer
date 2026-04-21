@@ -147,7 +147,11 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
-data/dynamic_re10k
+data/dynamic_re10k/*
+!data/dynamic_re10k/test/
+data/dynamic_re10k/test/*
+!data/dynamic_re10k/test/*.txt
+!data/dynamic_re10k/test/*.json
 data/re10k_preprocessed
 env
 .flake8
@@ -165,6 +169,7 @@ robustnerf
 on-the-go
 data/on_the_go_eval/
 *json
+!data/dynamic_re10k/test/*.json
 scripts/on-the-go-data-curation
 scripts/dinov3_visualization/outputs
 data/wildrayzer
