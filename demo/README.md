@@ -2,7 +2,7 @@
 title: WildRayZer
 emoji: 🎥
 colorFrom: indigo
-colorTo: slate
+colorTo: gray
 sdk: gradio
 app_file: app.py
 pinned: false

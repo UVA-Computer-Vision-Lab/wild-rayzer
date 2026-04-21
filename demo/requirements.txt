@@ -6,7 +6,7 @@ spaces
 einops
 omegaconf
 easydict
-gradio
+gradio>=4.0
 numpy
 Pillow
 opencv-python-headless
@@ -14,3 +14,11 @@ av
 lpips
 tqdm
 xformers
+scikit-image
+imageio
+imageio-ffmpeg
+scipy
+jaxtyping
+rich
+PyYAML
+wandb

@@ -64,17 +64,20 @@ NUM_INPUT = 2
 NUM_TARGET = 6
 
 
-HEADER_MD = """
-<div align="center">
-
-# WildRayZer: Self-supervised Large View Synthesis in Dynamic Environments
-
-[Xuweiyi Chen](https://xuweiyichen.github.io/) · [Wentao Zhou](https://smirkkkk.github.io/) · [Zezhou Cheng](https://sites.google.com/site/zezhoucheng/)
-
-University of Virginia · **CVPR 2026 Highlight**
-
-[arXiv](https://arxiv.org/abs/2601.10716)  ·  [Project Page](https://wild-rayzer.cs.virginia.edu/)  ·  [Dynamic-RE10K](https://huggingface.co/datasets/uva-cv-lab/Dynamic-RE10K)
-
+HEADER_HTML = """
+<div style="text-align:center;">
+  <h1 style="margin:0 0 0.4em 0;">WildRayZer: Self-supervised Large View Synthesis in Dynamic Environments</h1>
+  <p style="margin:0.3em 0;">
+    <a href="https://xuweiyichen.github.io/">Xuweiyi Chen</a> ·
+    <a href="https://smirkkkk.github.io/">Wentao Zhou</a> ·
+    <a href="https://sites.google.com/site/zezhoucheng/">Zezhou Cheng</a>
+  </p>
+  <p style="margin:0.3em 0;">University of Virginia · <b>CVPR 2026 Highlight</b></p>
+  <p style="margin:0.3em 0;">
+    <a href="https://arxiv.org/abs/2601.10716">arXiv</a> ·
+    <a href="https://wild-rayzer.cs.virginia.edu/">Project Page</a> ·
+    <a href="https://huggingface.co/datasets/uva-cv-lab/Dynamic-RE10K">Dynamic-RE10K</a>
+  </p>
 </div>
 """
 
@@ -172,7 +175,7 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
         return (ctx_paths, tgt_paths, *outs)
 
     with gr.Blocks(title="WildRayZer") as demo:
-        gr.Markdown(HEADER_MD)
+        gr.HTML(HEADER_HTML)
 
         # ===== Controls =====
         with gr.Row():
@@ -203,26 +206,54 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
                     show_label=True,
                 )
                 selected_scene = gr.Textbox(
-                    label="Selected scene", interactive=False, show_copy_button=True,
+                    label="Selected scene", interactive=False,
                 )
                 run_example_btn = gr.Button("Run on selected scene", variant="primary")
 
             with gr.Tab("⬆ Upload your own", id="upload"):
+                gr.HTML(
+                    f"""
+<div style="padding:14px 18px; margin: 6px 0 12px 0;
+            border:2px solid #ff7f00; border-radius:10px;
+            background: rgba(255,127,0,0.08);
+            font-size: 1.05em; text-align:center;">
+  <b>Required:</b>
+  exactly
+  <span style="display:inline-block; padding:2px 10px; margin:0 4px;
+               border-radius:999px; background:#ff7f00; color:white; font-weight:700;">
+    {NUM_INPUT} context images
+  </span>
+  and
+  <span style="display:inline-block; padding:2px 10px; margin:0 4px;
+               border-radius:999px; background:#ff7f00; color:white; font-weight:700;">
+    {NUM_TARGET} target images
+  </span>.
+  <br/><span style="font-size:0.9em; opacity:0.85;">
+    Anything else will be rejected. Drop images in chronological order.
+  </span>
+</div>
+"""
+                )
                 gr.Markdown(
-                    f"Upload exactly **{NUM_INPUT} context images** and "
-                    f"**{NUM_TARGET} target images** (256×256, any aspect — will be "
-                    "center-cropped and resized). The model predicts novel views "
-                    "and motion masks from the context set; the target set is only "
-                    "used for GT comparison and PSNR computation."
+                    """
+**What works best:**
+- Frames from a *single short clip* (a few seconds of footage).
+- Camera moves around a *mostly-static indoor scene* (matches training distribution).
+- Small-to-moderate motion between frames (big jumps will fail pose estimation).
+
+**Automatic preprocessing:** non-square images are *center-cropped* to a square,
+then resized to 256×256. EXIF orientation is respected (iPhone photos are
+auto-rotated). RGBA / grayscale inputs are converted to RGB.
+"""
                 )
                 with gr.Row():
                     input_upload = gr.File(
-                        label=f"Context images (exactly {NUM_INPUT})",
+                        label=f"📥 Context images — drop exactly {NUM_INPUT}",
                         file_count="multiple",
                         file_types=["image"],
                     )
                     target_upload = gr.File(
-                        label=f"Target images (exactly {NUM_TARGET})",
+                        label=f"🎯 Target images — drop exactly {NUM_TARGET}",
                         file_count="multiple",
                         file_types=["image"],
                     )
@@ -301,21 +332,47 @@ def build_ui(checkpoint: str, config: str, test_root: str) -> Tuple[gr.Blocks, L
     return demo, [test_root, images_dir]
 
 
+# ---------------------------------------------------------------------------
+# Module-level app construction
+# ---------------------------------------------------------------------------
+# HF Spaces invokes the file in hot-reload mode ("gradio app.py"), which does
+# NOT execute `if __name__ == '__main__':` — it just imports the module and
+# looks for a top-level `demo` Blocks instance. So we build `demo` at import
+# time; the CLI path (`python app.py`) still works via main().
+
+_CKPT_PATH = os.environ.get("WILDRAYZER_CKPT", DEFAULT_CKPT)
+_CFG_PATH = os.environ.get("WILDRAYZER_CFG", DEFAULT_CFG)
+_TEST_ROOT = os.environ.get("WILDRAYZER_TEST_ROOT", DEFAULT_TEST_ROOT)
+
+demo, _ALLOWED_PATHS = build_ui(_CKPT_PATH, _CFG_PATH, _TEST_ROOT)
+# Teach Gradio which on-disk paths it's allowed to serve (the D-RE10K images
+# live outside the CWD on some deployments). Safe to set on Blocks directly —
+# it's honoured whether launched via .launch() or the hot-reload CLI.
+try:
+    demo.allowed_paths = list(_ALLOWED_PATHS)
+except Exception:
+    pass
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ckpt",      default=os.environ.get("WILDRAYZER_CKPT", DEFAULT_CKPT))
-    parser.add_argument("--config",    default=os.environ.get("WILDRAYZER_CFG", DEFAULT_CFG))
-    parser.add_argument("--test-root", default=os.environ.get("WILDRAYZER_TEST_ROOT", DEFAULT_TEST_ROOT))
-    parser.add_argument("--port", type=int, default=7870)
+    parser.add_argument("--ckpt",      default=_CKPT_PATH)
+    parser.add_argument("--config",    default=_CFG_PATH)
+    parser.add_argument("--test-root", default=_TEST_ROOT)
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("GRADIO_SERVER_PORT", 7860)),
+    )
     parser.add_argument("--no-share", action="store_true")
     args = parser.parse_args()
 
-    demo, allowed_paths = build_ui(args.ckpt, args.config, args.test_root)
+    on_space = bool(os.environ.get("SPACE_ID"))
     demo.launch(
         server_name="0.0.0.0",
         server_port=args.port,
-        share=not args.no_share,
-        allowed_paths=allowed_paths,
+        share=False if on_space else (not args.no_share),
+        allowed_paths=_ALLOWED_PATHS,
     )
 
 

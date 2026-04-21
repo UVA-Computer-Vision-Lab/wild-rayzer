@@ -72,7 +72,19 @@ class WildRayZerDemo:
             print(f"  Motion mask predictor: {self.model.motion_mask_predictor is not None}")
 
     def preprocess_image(self, image_input):
-        """Preprocess image to model input format."""
+        """Preprocess image to the 256x256 RGB tensor the model expects.
+
+        Applied in order:
+          1. Open from whatever Gradio hands us (path, PIL.Image, or numpy).
+          2. Respect EXIF orientation (iPhone photos come in rotated).
+          3. Convert to RGB (handles RGBA, grayscale, CMYK, palette).
+          4. *Center-crop to a square* — the model was trained on square crops.
+             Naive `.resize((256, 256))` squishes 16:9 / portrait images.
+          5. Resize to 256x256 with LANCZOS.
+          6. Normalize to [0, 1] and return as CHW float tensor.
+        """
+        from PIL import ImageOps
+
         if isinstance(image_input, tuple):
             image_input = image_input[0]
 
@@ -83,8 +95,20 @@ class WildRayZerDemo:
         else:
             pil_image = Image.fromarray(image_input)
 
+        # iPhone / camera EXIF orientation — rotate in-place to the viewer's
+        # orientation before any geometric ops.
+        pil_image = ImageOps.exif_transpose(pil_image)
+
         if pil_image.mode != "RGB":
             pil_image = pil_image.convert("RGB")
+
+        # Center-crop to square (matches training's center_crop=true).
+        w, h = pil_image.size
+        if w != h:
+            side = min(w, h)
+            left = (w - side) // 2
+            top = (h - side) // 2
+            pil_image = pil_image.crop((left, top, left + side, top + side))
 
         pil_image = pil_image.resize((256, 256), Image.LANCZOS)
         img_array = np.array(pil_image) / 255.0
