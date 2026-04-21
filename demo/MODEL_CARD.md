@@ -103,7 +103,7 @@ attribution required. For commercial licensing, contact the authors.
 
 ## Acknowledgements
 
-This work was supported by the Adobe Research Gift, the University of Virginia
+This work was supported by the MathWorks Research Gift, Adobe Research Gift, the University of Virginia
 Research Computing and Data Analytics Center, the AMD AI & HPC Cluster Program,
 the ACCESS program, and the NAIRR Pilot. Computation was run on the Anvil
 supercomputer (NSF OAC-2005632) at Purdue and on Delta / DeltaAI (NSF

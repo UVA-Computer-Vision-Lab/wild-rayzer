@@ -202,4 +202,3 @@ demo/data/dynamic_re10k/test/images/
 demo/checkpoints/
 demo/__pycache__/
 demo/**/__pycache__/
-demo
