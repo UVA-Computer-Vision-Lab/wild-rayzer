@@ -18,7 +18,7 @@
     <a href="https://arxiv.org/abs/2601.10716"><strong>Paper</strong></a> |
     <a href="https://wild-rayzer.cs.virginia.edu/"><strong>Project Page</strong></a> |
     <a href="https://huggingface.co/datasets/uva-cv-lab/Dynamic-RE10K"><strong>Dynamic-RE10K</strong></a> |
-    <a href=""><strong>🤗 Live Demo (coming soon)</strong></a>
+    <a href="https://huggingface.co/spaces/uva-cv-lab/wildrayzer"><strong>🤗 Live Demo </strong></a>
 </div>
 
 --------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ We release the **2-input-view** checkpoint used by the demo. Place it at `./chec
 
 | Views | Model | Download |
 |-------|-------|----------|
-| 2-input / 6-target | WildRayZer | *Upload link coming soon* |
+| 2-input / 6-target | WildRayZer | [Huggingface](https://huggingface.co/uva-cv-lab/wildrayzer-checkpoints) |
 
 To train your own checkpoint (e.g. 3- or 4-input-view settings), follow the three-stage pipeline in [§3 Training](#3-training). A full run from Stage 1 → Stage 3 on 8× H100 reproduces the paper's D-RE10K numbers.
 
